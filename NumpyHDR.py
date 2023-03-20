@@ -1,5 +1,6 @@
 from PIL import Image
 import numpy as np
+from numba import njit
 #import matplotlib.pyplot as plt
 
 class NumpyHDR:
@@ -101,23 +102,19 @@ class NumpyHDR:
         #plot_histogram(mask, title="mask")
         return mask
 
-    def shadowlift(self, img, center=200, width=20, threshold=0.2, amount=1):
-        '''Mask with sigmoid smooth targets dark sections'''
+    def highlightsdrop(self, img, center=0.7, width=0.15, threshold=0.6, amount=0.15):
+        '''Mask with sigmoid smooth targets dark sections. Creates artefacts'''
         mask = 1 / (1 + np.exp((center - img) / width))  # Smooth gradient mask
-        print(mask)
-        print(img)
         mask = np.where(img < threshold, mask, 1)  # Apply threshold to the mask
-        print(mask)
-        #plot_histogram(mask, title= "maskin")
-        img_adjusted = img * mask * amount # Adjust the image with a user-specified amount
+        img_adjusted = img - mask * (amount) # Adjust the image with a user-specified amount
 
         return img_adjusted
 
-    def highlightdrop(self, img, center=200, width=20, threshold=0.8, amount: float=1):
+    def shadowlift(self, img, center=0.2, width=0.1, threshold=0.2, amount= 0.06):
         '''Mask with sigmoid smooth targets bright sections'''
         mask = 1 / (1 + np.exp((center - img) / width))  # Smooth gradient mask
         mask = np.where(img > threshold, mask, 1)  # Apply threshold to the mask
-        img_adjusted = img + mask * (-amount)  # Adjust the image with a user-specified amount
+        img_adjusted = img + mask * (amount)  # Adjust the image with a user-specified amount
 
         return img_adjusted
 
@@ -137,13 +134,14 @@ class NumpyHDR:
         for path in image_paths:
             #print(path)
             img = Image.open(path).convert('RGB')
-            img = img.resize((1920, 1080))
+            img = img.resize((1280, 720))
             img = np.array(img).astype(np.float32) / 255.0
             img = np.power(img, gamma)
             images.append(img)
 
         # Compute the weight maps for each input image based on the local contrast.
         weight_maps = []
+
         for img in images:
             gray = np.dot(img, [0.2989, 0.5870, 0.1140])
             #kernel = np.array([[-1, 1, -1], [1, 7, 1], [-1, 1, -1]])
@@ -163,18 +161,7 @@ class NumpyHDR:
 
         return fused
 
-    def sequence(self):
-        hdr_image = self.mertens_fusion(self.input_image ,0.7, 0.01)
-        result = self.simple_clip(hdr_image,1)
-        image = Image.fromarray(result)
-        #output_path = f'hdr/webcam_hdr10.jpg'
-        image.save(f"{self.output_path}_hdr.jpg", quality=self.compress_quality)
-
-class NumpyUtility:
-    def __init__(self):
-        '''Utilitys made with chatGPT for experimentation, few are working'''
-
-    def compress_dynamic_range(image):
+    def compress_dynamic_range(self, image):
         # Find the 1st and 99th percentiles of the image
         p1, p99 = np.percentile(image, (1, 99))
 
@@ -182,17 +169,14 @@ class NumpyUtility:
         img_range = p99 - p1
 
         # Calculate the compression factor required to fit the image into 8-bit range
-        c = 255.0 / img_range
+        c = 1 / img_range
 
         # Subtract the 1st percentile from the image and clip it to the [0, 1] range
-        new_image = np.clip((image - p1) * c, 0, 255)
-
-        # Convert the image to uint8 format
-        new_image = new_image.astype(np.uint8)
+        new_image = np.clip((image - p1) * c, 0, 1)
 
         return new_image
 
-    def compress_dynamic_range_histo(image, new_min=0, new_max=255):
+    def compress_dynamic_range_histo(self, image, new_min=0.01, new_max=0.99):
         """Compress the dynamic range of an image using histogram stretching.
 
         Args:
@@ -217,6 +201,41 @@ class NumpyUtility:
         return new_image
 
         return fused
+
+    def sequence(self, gain, weight):
+        print(self.input_image)
+        hdr_image = self.mertens_fusion(self.input_image ,gain, weight)
+        hdr_image = self.compress_dynamic_range(hdr_image)
+        #hdr_image = self.compress_dynamic_range_histo(hdr_image)
+        #hdr_image = self.highlightsdrop(hdr_image)
+        hdr_image = self.shadowlift(hdr_image)
+        result = self.simple_clip(hdr_image,1.2)
+        image = Image.fromarray(result)
+        image.save(f"{self.output_path}_hdr.jpg", quality=self.compress_quality)
+
+class NumpyUtility:
+    def __init__(self):
+        '''Utilitys made with chatGPT for experimentation, few are working'''
+
+    def compress_dynamic_range(image):
+        # Find the 1st and 99th percentiles of the image
+        p1, p99 = np.percentile(image, (1, 99))
+
+        # Calculate the range of the image
+        img_range = p99 - p1
+
+        # Calculate the compression factor required to fit the image into 8-bit range
+        c = 1 / img_range
+
+        # Subtract the 1st percentile from the image and clip it to the [0, 1] range
+        new_image = np.clip((image - p1) * c, 0, 1)
+
+        # Convert the image to uint8 format
+        new_image = new_image.astype(np.uint8)
+
+        return new_image
+
+
 
     def adjust_luminance(image, mask, amount):
         # Convert the image to LAB color space
@@ -523,7 +542,7 @@ class NumpyUtility:
             The tonemapped output image as a NumPy array.
         """
         # Convert the image to floating point RGB.
-        image = image.astype(np.float32)
+        #image = image.astype(np.float32)
 
         # Compute the log average luminance.
         lum = np.exp(np.mean(np.log(0.0001 + image)))
