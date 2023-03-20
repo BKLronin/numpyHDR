@@ -3,13 +3,31 @@ import numpy as np
 #import matplotlib.pyplot as plt
 
 class NumpyHDR:
-    '''Numpy and PIL implementation of a Mertens Fusion alghoritm'''
-    def __init__(self):
-        self.input_image: list
-        self.output_path: str = '/'
-        self.compress_quality: int = 50
+    '''Numpy and PIL implementation of a Mertens Fusion alghoritm
+    Usage: Instantiate then set attributes:
+        input_image = List containing path strings including .jpg Extension
+        output_path = String ot Output without jpg ending
+        compress_quality = 0-100 Jpeg compression level defaults to 75
 
-    def plot_histogram(image, title="Histogram", bins=256):
+        Run function sequence() to start processing.
+        Example:
+
+            hdr = numpyHDR.NumpyHDR()
+
+            hdr.input_image = photos/EV- stages/
+            hdr.compress_quality = 50
+            hdr.output_path = photos/result/
+            hdr.sequence()
+
+        returns: Nothing
+    '''
+
+    def __init__(self):
+        self.input_image: list = []
+        self.output_path: str = '/'
+        self.compress_quality: int = 75
+
+    def plot_histogram(self, image, title="Histogram", bins=256):
         """Plot the histogram of an image.
 
         Args:
@@ -25,7 +43,7 @@ class NumpyHDR:
         plt.show()
     ### Experimental functions above this line. chatGPT sketches
 
-    def simple_clip(fused,gamma):
+    def simple_clip(self, fused,gamma):
         # Apply gamma correction
         fused = np.clip(fused, 0, 1)
         fused = np.power(fused, 1.0 / gamma)
@@ -33,7 +51,9 @@ class NumpyHDR:
         fused = (255.0 * fused).astype(np.uint8)
         #fused = Image.fromarray(fused)
 
-    def convolve2d(image, kernel):
+        return fused
+
+    def convolve2d(self, image, kernel):
         """Perform a 2D convolution on the given image with the given kernel.
 
         Args:
@@ -73,14 +93,16 @@ class NumpyHDR:
 
         return convolved_image
 
-    def mask(img, center=50, width=20, threshold=0.2):
+    def mask(self, img, center=50, width=20, threshold=0.2):
+        '''Mask with sigmoid smooth'''
         mask = 1 / (1 + np.exp((center - img) / width))  # Smooth gradient mask
         mask = np.where(img > threshold, mask, 1)  # Apply threshold to the mask
         mask =  img * mask
         #plot_histogram(mask, title="mask")
         return mask
 
-    def shadowlift(img, center=200, width=20, threshold=0.2, amount=1):
+    def shadowlift(self, img, center=200, width=20, threshold=0.2, amount=1):
+        '''Mask with sigmoid smooth targets dark sections'''
         mask = 1 / (1 + np.exp((center - img) / width))  # Smooth gradient mask
         print(mask)
         print(img)
@@ -91,14 +113,15 @@ class NumpyHDR:
 
         return img_adjusted
 
-    def highlightdrop(img, center=200, width=20, threshold=0.8, amount: float=1):
+    def highlightdrop(self, img, center=200, width=20, threshold=0.8, amount: float=1):
+        '''Mask with sigmoid smooth targets bright sections'''
         mask = 1 / (1 + np.exp((center - img) / width))  # Smooth gradient mask
         mask = np.where(img > threshold, mask, 1)  # Apply threshold to the mask
         img_adjusted = img + mask * (-amount)  # Adjust the image with a user-specified amount
 
         return img_adjusted
 
-    def mertens_fusion(image_paths, gamma=2.2, contrast_weight=0.2):
+    def mertens_fusion(self, image_paths, gamma=2.2, contrast_weight=0.2):
         """Fuse multiple exposures into a single HDR image using the Mertens algorithm.
 
         Args:
@@ -112,6 +135,7 @@ class NumpyHDR:
         # Load the input images and convert them to floating-point format.
         images = []
         for path in image_paths:
+            #print(path)
             img = Image.open(path).convert('RGB')
             img = img.resize((1920, 1080))
             img = np.array(img).astype(np.float32) / 255.0
@@ -124,7 +148,7 @@ class NumpyHDR:
             gray = np.dot(img, [0.2989, 0.5870, 0.1140])
             #kernel = np.array([[-1, 1, -1], [1, 7, 1], [-1, 1, -1]])
             kernel = np.array([[-1, -1, -1], [-1, 7, -1], [-1, -1, -1]])
-            laplacian = np.abs(convolve2d(gray, kernel))
+            laplacian = np.abs(self.convolve2d(gray, kernel))
             weight = np.power(laplacian, contrast_weight)
             weight_maps.append(weight)
 
@@ -140,12 +164,11 @@ class NumpyHDR:
         return fused
 
     def sequence(self):
-        #list = ['hdr/webcam20_3_2023_ev1.jpg','hdr/webcam20_3_2023_ev-1.jpg']
         hdr_image = self.mertens_fusion(self.input_image ,0.7, 0.01)
         result = self.simple_clip(hdr_image,1)
         image = Image.fromarray(result)
         #output_path = f'hdr/webcam_hdr10.jpg'
-        image.save(self.output_path, quality=self.compress_quality)
+        image.save(f"{self.output_path}_hdr.jpg", quality=self.compress_quality)
 
 class NumpyUtility:
     def __init__(self):
