@@ -1,5 +1,7 @@
-from PIL import Image
 import numpy as np
+from PIL import Image
+
+
 #import matplotlib.pyplot as plt
 
 class NumpyHDR:
@@ -131,10 +133,8 @@ class NumpyHDR:
         # Load the input images and convert them to floating-point format.
         images = []
         for path in image_paths:
-            #print(path)
-            img = Image.open(path).convert('RGB')
+            img = Image.open(path)
             img = img.resize((1280, 720))
-            img = np.array(img).astype(np.float32) / 255.0
             img = np.power(img, gamma)
             images.append(img)
 
@@ -143,7 +143,6 @@ class NumpyHDR:
 
         for img in images:
             gray = np.dot(img, [0.2989, 0.5870, 0.1140])
-            #kernel = np.array([[-1, 1, -1], [1, 7, 1], [-1, 1, -1]])
             kernel = np.array([[-1, -1, -1], [-1, 7, -1], [-1, -1, -1]])
             laplacian = np.abs(self.convolve2d(gray, kernel))
             weight = np.power(laplacian, contrast_weight)
@@ -200,6 +199,22 @@ class NumpyHDR:
         return new_image
 
         return fused
+    def open_image(filename):
+        # Open the image file in binary mode
+        with open(filename, 'rb') as f:
+            # Read the binary data from the file
+            binary_data = f.read()
+
+        # Convert the binary data to a 1D numpy array of uint8 type
+        image_array = np.frombuffer(binary_data, dtype=np.uint8)
+
+        # Reshape the 1D array into a 2D array with the correct image shape
+        # (Assuming a 3-channel RGB image with shape (height, width))
+        height = int.from_bytes(binary_data[16:20], byteorder='big')
+        width = int.from_bytes(binary_data[20:24], byteorder='big')
+        image_array = image_array[24:].reshape((height, width, 3))
+
+        return image_array
 
     def sequence(self, gain, weight):
         print(self.input_image)
