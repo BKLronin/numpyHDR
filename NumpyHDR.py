@@ -1,6 +1,5 @@
 from PIL import Image
 import numpy as np
-from numba import njit
 #import matplotlib.pyplot as plt
 
 class NumpyHDR:
