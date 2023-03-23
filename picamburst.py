@@ -15,8 +15,8 @@ picam2.set_controls({"AwbEnable": 1, "AeEnable": 1, "AeConstraintMode": controls
 np_array_ev1 = picam2.capture_array()
 picam2.set_controls({"AwbEnable": 1, "AeEnable": 1, "AeConstraintMode": controls.AeConstraintModeEnum.Normal})
 np_array_ev_neg1 = picam2.capture_array()
-picam2.helpers.save(np_array_ev0, metadata, "1.jpg")
-picam2.helpers.save(np_array_ev1, metadata, "2.jpg")
-picam2.helpers.save(np_array_ev_neg1, metadata, "3.jpg")
+picam2.helpers.save(np_array_ev0,  "1.jpg")
+picam2.helpers.save(np_array_ev1,  "2.jpg")
+picam2.helpers.save(np_array_ev_neg1,  "3.jpg")
 
 picam2.stop()
