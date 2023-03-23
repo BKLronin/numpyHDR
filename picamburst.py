@@ -2,7 +2,7 @@
 
 import numpyHDR
 from picamera2 import Picamera2
-from libcamera import Controls
+from libcamera import controls
 
 picam2 = Picamera2()
 config = picam2.create_still_configuration()
