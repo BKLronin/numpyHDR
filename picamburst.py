@@ -9,7 +9,7 @@ config = picam2.create_still_configuration()
 picam2.configure(config)
 
 picam2.start()
-ctrls = Controls(picam2)
+ctrls = controls(picam2)
 ctrls.AwbEnable = 1
 ctrls.AeEnable = 1
 ctrls.ConstraintModeEnum.Highlight
