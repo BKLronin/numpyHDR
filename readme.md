@@ -46,6 +46,8 @@
 *Get image arrays from raspicam*
 - `stack = pcb.get_exposure_stack()`
 
+*OR*
+
 *Get image arrays from files*
 - `stack = file.openImageList(path_list, True)`
 
