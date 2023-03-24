@@ -4,7 +4,6 @@ import numpyHDR
 from PIL import Image
 from picamera2 import Picamera2
 from libcamera import controls
-import time
 
 picam2 = Picamera2()
 config = picam2.create_still_configuration()
