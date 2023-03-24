@@ -29,13 +29,13 @@ def get_exposure_stack(factor: int = 2):
     picam2.set_controls({"AeEnable": 0})
     confirmed = picam2.capture_metadata()["AeLocked"]
     while confirmed != True:
-        confimed = picam2.capture_metadata()["AeLocked"]
+        confirmed = picam2.capture_metadata()["AeLocked"]
         time.sleep(.1)
 
     picam2.set_controls({"AnalogueGain": gain_start})
     confirmed = picam2.capture_metadata()["AnalogueGain"]
     while confirmed != gain_start in range(gain_start -0.1, gain_start +0.1):
-        confimed = picam2.capture_metadata()["AnalogueGain"]
+        confirmed = picam2.capture_metadata()["AnalogueGain"]
         time.sleep(.1)
 
     ev1 = picam2.capture_array()

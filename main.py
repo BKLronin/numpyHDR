@@ -1,3 +1,4 @@
+#!//usr/bin/python3
 import numpyHDR as hdr
 import picamburst as pcb
 import file_utility as file
