@@ -11,6 +11,8 @@ config = picam2.create_still_configuration()
 picam2.configure(config)
 picam2.set_controls({"AwbEnable": 1})
 picam2.set_controls({"AeEnable": 1})
+picam2.set_controls({"AfMode": controls.AfModeEnum.Manual })
+picam2.set_controls({"LensPosition": 0.0 })
 #picam2.set_controls({"AnalogueGain": 1.0})
 picam2.start()
 time.sleep(1)
@@ -20,16 +22,11 @@ start = picam2.capture_metadata()
 exposure_start = start["ExposureTime"]
 gain_start = start["AnalogueGain"]
 
-
-ev1 = picam2.capture_array()
-print("Picture one is done")
-
 picam2.set_controls({"AeEnable": 0})
 confirmed = picam2.capture_metadata()["AeLocked"]
 while confirmed != True:
 	confimed = picam2.capture_metadata()["AeLocked"]
 	time.sleep(.1)
-
 
 picam2.set_controls({"AnalogueGain": gain_start})
 confirmed = picam2.capture_metadata()["AnalogueGain"]
@@ -37,27 +34,30 @@ while confirmed != gain_start in range(gain_start -0.1, gain_start +0.1):
         confimed = picam2.capture_metadata()["AnalogueGain"]
         time.sleep(.1)
 
-ev_low = int(exposure_start / 4)
+ev1 = picam2.capture_array()
+#print("Picture one is done")
+
+ev_low = int(exposure_start / 2)
 picam2.set_controls({"ExposureTime": ev_low})
 confirmed = picam2.capture_metadata()["ExposureTime"]
 while confirmed not in range(ev_low -100, ev_low + 100 ):
         confirmed = picam2.capture_metadata()["ExposureTime"]
         time.sleep(.01)
 
-print("2",confirmed)
+#print("2",confirmed)
 ev2 = picam2.capture_array()
-print("Picture 2 is captured to array")
+#print("Picture 2 is captured to array")
 
-ev_high = int(exposure_start * 4)
+ev_high = int(exposure_start * 2)
 picam2.set_controls({"ExposureTime": ev_high})
 confirmed = picam2.capture_metadata()["ExposureTime"]
 while confirmed not in range(ev_high -100, ev_high + 100 ):
         confirmed = picam2.capture_metadata()["ExposureTime"]
         time.sleep(.01)
 
-print("3",confirmed)
+#print("3",confirmed)
 ev3 = picam2.capture_array()
-print("Picture 3 is captured")
+#print("Picture 3 is captured")
 print("Saving..")
 
 image = Image.fromarray(ev1)
