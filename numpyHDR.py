@@ -1,7 +1,5 @@
 import numpy as np
 
-
-
 '''Numpy and PIL implementation of a Mertens Fusion alghoritm
 Usage: Instantiate then set attributes:
     input_image = List containing path strings including .jpg Extension

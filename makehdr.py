@@ -1,6 +1,6 @@
 #!//usr/bin/python3
-import numpyHDR as hdr
 import file_utility as file
+import numpyHDR as hdr
 
 '''CLI application for HDR experiments'''
 

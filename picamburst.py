@@ -1,10 +1,9 @@
 #!//usr/bin/python3
 
-import numpyHDR
-from PIL import Image
-from picamera2 import Picamera2
-from libcamera import controls
 import time
+
+from libcamera import controls
+from picamera2 import Picamera2
 
 picam2 = Picamera2()
 config = picam2.create_still_configuration()
