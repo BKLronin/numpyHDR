@@ -1,9 +1,16 @@
-import numpyHDR
+import numpyHDR as hdr
+import picamburst as pcb
+import file_utility as file
 
-#Testfile
-hdr = numpyHDR.NumpyHDR()
-liste = ['test_hdr0.jpg','test_hdr1.jpg', 'test_hdr2.jpg']
-hdr.input_image = liste
-hdr.output_path = 'hdr/fused_merten17'
-hdr.compress_quality = 75
-hdr.sequence(1, 1, 1, True)
+'''Example of a complete HDR process starting with raspicam '''
+
+#Get sequence from raspicam
+stack = pcb.get_exposure_stack()
+
+#Process HDR with mertens fusion and post effects
+result = hdr.process(stack, 1, 1, 1, True)
+
+#Save Result to File
+file = file.saveResultToFile(result, 'hdr/', 75)
+
+
