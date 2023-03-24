@@ -20,6 +20,7 @@ if int(select) == 2:
         i += 1
         image = input(f"Enter filename {i}: ")
         path_list.append(image)
+    stack = file.openImageList(path_list, True)
 
 if int(select) == 3:
     path_list = []
@@ -29,12 +30,13 @@ if int(select) == 3:
     for i in range(int(nr)):
         filename = f"{image}{i}.jpg"
         path_list.append(filename)
+    stack = file.openImageList(path_list, True)
 
 if int(select) == 4:
     path_list = ['test_hdr0.jpg', 'test_hdr1.jpg', 'test_hdr2.jpg']
+    stack = file.openImageList(path_list, True)
 
 print(path_list)
-stack = file.openImageList(path_list, True)
 
 #Process HDR with mertens fusion and post effects
 result = hdr.process(stack, 1, 1, 1, True)
