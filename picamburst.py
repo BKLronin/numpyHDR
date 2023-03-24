@@ -24,6 +24,10 @@ def get_exposure_stack(factor: int = 2):
     start = picam2.capture_metadata()
     exposure_start = start["ExposureTime"]
     gain_start = start["AnalogueGain"]
+    if exposure_start > 117000:
+        print("Low Light levels out of range, can't make HDR")
+    if exposure_start < factor:
+        print("HIgh Light levels out of range, cant make HDR")
 
     picam2.set_controls({"AeEnable": 0})
     confirmed = picam2.capture_metadata()["AeLocked"]
@@ -33,7 +37,7 @@ def get_exposure_stack(factor: int = 2):
 
     picam2.set_controls({"AnalogueGain": gain_start})
     confirmed = picam2.capture_metadata()["AnalogueGain"]
-    while confirmed != gain_start in range(gain_start -0.1, gain_start +0.1):
+    while confirmed != gain_start in range(gain_start -1, gain_start +1):
         confirmed = picam2.capture_metadata()["AnalogueGain"]
         time.sleep(.1)
 
