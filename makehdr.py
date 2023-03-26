@@ -33,16 +33,17 @@ if int(select) == 3:
     stack = file.openImageList(path_list, True)
 
 if int(select) == 4:
-    path_list = ['test_hdr0.jpg', 'test_hdr1.jpg', 'test_hdr2.jpg']
+    path_list = ['webcam25_3_2023_ev0.jpg','webcam25_3_2023_ev1.jpg','webcam25_3_2023_ev2.jpg']
     stack = file.openImageList(path_list, True)
 
 print(path_list)
 
-#Process HDR with mertens fusion and post effects
-result = hdr.process(stack, 1, 1, 1, True)
+#Process HDR with mertens fusion and post effects, blur
+#Set last value to false for double the speed but lesser blancaed hdr effect.
+result = hdr.process(stack, 1, 1, 1, True, True)
 
 #Save Result to File
-file = file.saveResultToFile(result, 'hdr/result', 75)
+file = file.saveResultToFile(result, 'hdr/result2', 75)
 
 
 

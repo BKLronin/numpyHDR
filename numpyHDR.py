@@ -28,42 +28,42 @@ def simple_clip(fused,gamma):
 
     return fused
 def convolve2d(image, kernel):
-    """Perform a 2D convolution on the given image with the given kernel.
+    # Get the dimensions of the input image and kernel
+    image_height, image_width = image.shape
+    kernel_height, kernel_width = kernel.shape
 
-    Args:
-        image: The input image to convolve.
-        kernel: The kernel to convolve the image with.
+    # Compute the padding needed to handle boundary effects
+    pad_height = (kernel_height - 1) // 2
+    pad_width = (kernel_width - 1) // 2
+    padded_image = np.pad(image, ((pad_height, pad_height), (pad_width, pad_width)), mode='constant')
 
-    Returns:
-        The convolved image.
-    """
-    # Get the dimensions of the image and kernel.
-    image_height, image_width = image.shape[:2]
-    kernel_height, kernel_width = kernel.shape[:2]
+    # Define generators for row and column indices
+    row_indices = range(image_height)
+    col_indices = range(image_width)
 
-    # Compute the amount of padding to add to the image.
-    pad_height = kernel_height // 2
-    pad_width = kernel_width // 2
-
-    # Pad the image with zeros.
-    padded_image = np.zeros(
-        (image_height + 2 * pad_height, image_width + 2 * pad_width),
-        dtype=np.float32,
+    # Define a generator expression to generate patches centered at each pixel
+    patches = (
+        padded_image[
+            row : row + kernel_height, col : col + kernel_width
+        ]
+        for row in row_indices
+        for col in col_indices
     )
-    padded_image[pad_height:-pad_height, pad_width:-pad_width] = image
 
-    # Flip the kernel horizontally and vertically.
-    flipped_kernel = np.flipud(np.fliplr(kernel))
+    # Define a generator expression to generate element-wise products of patches and flipped kernels
+    products = (
+        patch * np.flip(kernel, axis=(0, 1))
+        for patch in patches
+    )
 
-    # Convolve the padded image with the flipped kernel.
-    convolved_image = np.zeros_like(image, dtype=np.float32)
-    for row in range(image_height):
-        for col in range(image_width):
-            patch = padded_image[
-                row : row + kernel_height, col : col + kernel_width
-            ]
-            product = patch * flipped_kernel
-            convolved_image[row, col] = product.sum()
+    # Define a generator expression to generate convolved values
+    convolved_values = (
+        product.sum()
+        for product in products
+    )
+
+    # Reshape the convolved values into an output image
+    convolved_image = np.array(list(convolved_values)).reshape((image_height, image_width))
 
     return convolved_image
 
@@ -96,14 +96,35 @@ def shadowlift(img, center=0.2, width=0.1, threshold=0.2, amount= 0.05):
     img_adjusted = np.clip(img_adjusted, 0, 1)
 
     return img_adjusted
+def blur(image, amount=1):
+    # Define a kernel for sharpening
+    kernel = np.array([[0, -1, 0],
+                       [-1, 4, -1],
+                       [0, -1, 0]])
 
-def mertens_fusion(stack, gamma=1, contrast_weight=1):
+    # Apply the kernel to each channel of the image using convolution
+    blurred = convolve2d(image, kernel)
+
+    # Add the original image to the sharpened image with a weight of the sharpening amount
+    sharpened = image + amount * (image - blurred)
+
+    sharpened = np.clip(sharpened, 0, 1)
+
+    # Crop the output image to match the input size
+    #sharpened = sharpened.reshape(image.shape)
+
+    return sharpened
+
+
+
+def mertens_fusion(stack, gamma:float =1, contrast_weight:float =1 ,blurred: bool = False) -> bytearray:
     """Fuse multiple exposures into a single HDR image using the Mertens algorithm.
 
     Args:
         image_paths: A list of paths to input images.
         gamma: The gamma correction value to apply to the input images.
         contrast_weight: The weight of the local contrast term in the weight map computation.
+        blurred: Helps making transitions for the weights smoother but increases provessing time x2
 
     Returns:
         The fused HDR image.
@@ -111,6 +132,7 @@ def mertens_fusion(stack, gamma=1, contrast_weight=1):
 
     images = []
     for array in stack:
+        #Incoming arrays in 255 er range
         img = np.array(array).astype(np.float32) / 255.0
         img = np.power(img, gamma)
         images.append(img)
@@ -119,8 +141,15 @@ def mertens_fusion(stack, gamma=1, contrast_weight=1):
     weight_maps = []
 
     for img in images:
+        threshold_h = .99
+        threshold_l = .1
+        # Apply thresholding to filter out overexposed portions of the image
+        img = np.where(img > threshold_h, 0.99, img)
         gray = np.dot(img, [0.2989, 0.5870, 0.1140])
-        kernel = np.array([[-1, -1, -1], [-1, 7, -1], [-1, -1, -1]])
+        if blurred:
+            gray = blur(gray, 1)
+        #kernel = np.array([[-1, -1, -1], [-1, 8, -1], [-1, -1, -1]])
+        kernel = np.array([[1, 2, 1], [2, -11, 2], [1, 2, 1]])
         laplacian = np.abs(convolve2d(gray, kernel))
         weight = np.power(laplacian, contrast_weight)
         weight_maps.append(weight)
@@ -133,7 +162,6 @@ def mertens_fusion(stack, gamma=1, contrast_weight=1):
     fused = np.zeros(images[0].shape, dtype=np.float32)
     for i, img in enumerate(images):
         fused += weight_maps[i][:, :, np.newaxis] * img
-    #print(fused)
 
     return fused
 
@@ -178,7 +206,7 @@ def compress_dynamic_range_histo(image, new_min=0.01, new_max=0.99):
 
     return new_image
 
-def process(stack, gain: float = 1, weight: float = 1, gamma: float = 1, post: bool = True):
+def process(stack, gain: float = 1, weight: float = 1, gamma: float = 1, post: bool = True, blurred: bool = True):
     '''Processes the stack that contains a list of arrays form the camera into a PIL compatible clipped output array
     Args:
         stack : input list with arrays
@@ -202,7 +230,7 @@ def process(stack, gain: float = 1, weight: float = 1, gamma: float = 1, post: b
 
     '''
 
-    hdr_image = mertens_fusion(stack ,gain, weight)
+    hdr_image = mertens_fusion(stack ,gain, weight, blurred)
     if post == True:
         #hdr_image = self.highlightsdrop(hdr_image)
         hdr_image = shadowlift(hdr_image)
