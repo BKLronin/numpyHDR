@@ -1,5 +1,15 @@
 import numpy as np
 
+try:
+    import convolve2d_cython
+    available = True
+    print("Using compiled Cython Convolve")
+except ImportError:
+    available = False
+    print("Using normal Numpy Convolve")
+
+
+
 '''Numpy and PIL implementation of a Mertens Fusion alghoritm
 Usage: Instantiate then set attributes:
     input_image = List containing path strings including .jpg Extension
@@ -103,8 +113,13 @@ def blur(image, amount=1):
                        [0, -1, 0]])
 
     # Apply the kernel to each channel of the image using convolution
-    blurred = convolve2d(image, kernel)
-
+    #blurred = convolve2d(image, kernel)
+    kernel = kernel.astype(np.float64)
+    #image= image.astype(np.float64)
+    if available:
+        blurred = convolve2d_cython.convolve2d(image, kernel)
+    else:
+        blurred = convolve2d(image, kernel)
     # Add the original image to the sharpened image with a weight of the sharpening amount
     sharpened = image + amount * (image - blurred)
 
@@ -133,12 +148,13 @@ def mertens_fusion(stack, gamma:float =1, contrast_weight:float =1 ,blurred: boo
     images = []
     for array in stack:
         #Incoming arrays in 255 er range
-        img = np.array(array).astype(np.float32) / 255.0
+        img = np.array(array).astype(np.float64) / 255.0
         img = np.power(img, gamma)
         images.append(img)
 
     # Compute the weight maps for each input image based on the local contrast.
     weight_maps = []
+    kernel = np.array([[1, 2, 1], [2, -11, 2], [1, 2, 1]])
 
     for img in images:
         threshold_h = .99
@@ -149,8 +165,12 @@ def mertens_fusion(stack, gamma:float =1, contrast_weight:float =1 ,blurred: boo
         if blurred:
             gray = blur(gray, 1)
         #kernel = np.array([[-1, -1, -1], [-1, 8, -1], [-1, -1, -1]])
-        kernel = np.array([[1, 2, 1], [2, -11, 2], [1, 2, 1]])
-        laplacian = np.abs(convolve2d(gray, kernel))
+
+        kernel = kernel.astype(np.float64)
+        if available:
+            laplacian = np.abs(convolve2d_cython.convolve2d(gray, kernel))
+        else:
+            laplacian = np.abs(convolve2d(gray, kernel))
         weight = np.power(laplacian, contrast_weight)
         weight_maps.append(weight)
 
@@ -159,7 +179,7 @@ def mertens_fusion(stack, gamma:float =1, contrast_weight:float =1 ,blurred: boo
     weight_maps = [w / total_weight for w in weight_maps]
 
     # Compute the fused HDR image by computing a weighted sum of the input images.
-    fused = np.zeros(images[0].shape, dtype=np.float32)
+    fused = np.zeros(images[0].shape, dtype=np.float64)
     for i, img in enumerate(images):
         fused += weight_maps[i][:, :, np.newaxis] * img
 
