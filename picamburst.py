@@ -15,7 +15,7 @@ picam2.set_controls({"LensPosition": 0.0 })
 
 def get_exposure_stack(factor: int = 2):
     '''Returns a list with arrays that contain different exposures controlled by the factor.'''
-    '''The Autoamtically set exposure of the first frame is saved and multiplied or divided ba the factor to get the above or under epxosures.'''
+    '''The Autoamtically set exposure of the first frame is saved and multiplied or divided by the factor to get the above or under epxosures.'''
 
     picam2.start()
     time.sleep(1)
@@ -23,7 +23,7 @@ def get_exposure_stack(factor: int = 2):
     print(picam2.capture_metadata())
     start = picam2.capture_metadata()
     exposure_start = start["ExposureTime"]
-    gain_start = start["AnalogueGain"]
+    gain_start = int(round(start["AnalogueGain"]))
     if exposure_start > 117000 or exposure_start < factor:
         print("Low Light levels out of range, can't make HDR")
         exit()

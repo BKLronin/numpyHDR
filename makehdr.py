@@ -12,7 +12,7 @@ select = input("Select Image Source: 1 - Raspicam, 2 - From File, 3 - Image sequ
 if int(select) == 1:
     import picamburst as pcb
     #Get sequence from raspicam
-    stack = pcb.get_exposure_stack()
+    stack = pcb.get_ex2posure_stack()
 
 if int(select) == 2:
     path_list = []
